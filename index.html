@@ -10,6 +10,11 @@
             --primary: #3b82f6;
             --bg: #0f172a;
             --text: #f8fafc;
+            --surface: #1e293b;
+            --border: #334155;
+            --muted: #94a3b8;
+            --success: #10b981;
+            --danger: #ef4444;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -19,7 +24,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            height: 100dvh; /* Better for mobile browsers */
+            height: 100dvh;
             overflow: hidden;
         }
         header {
@@ -44,32 +49,20 @@
             height: 100%;
             background: #000;
         }
-        #reader {
-            width: 100%;
-            height: 100%;
-            border: none !important;
-        }
-        /* Override html5-qrcode inline styles for full screen */
+        #reader { width: 100%; height: 100%; border: none !important; }
         #reader video {
             object-fit: cover !important;
-            width: 100% !important;
-            height: 100% !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
+            width: 100% !important; height: 100% !important;
+            position: absolute !important; top: 0 !important; left: 0 !important;
         }
         #reader canvas {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            position: absolute !important; top: 0 !important; left: 0 !important;
+            width: 100% !important; height: 100% !important;
             object-fit: cover !important;
         }
         .controls {
             position: absolute;
-            bottom: 2rem;
-            left: 0; right: 0;
+            bottom: 2rem; left: 0; right: 0;
             display: flex;
             justify-content: center;
             gap: 1rem;
@@ -79,7 +72,7 @@
         button {
             background-color: rgba(30, 41, 59, 0.8);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255,255,255,0.2);
             color: white;
             padding: 0.875rem 1.5rem;
             border-radius: 9999px;
@@ -92,303 +85,656 @@
             justify-content: center;
             gap: 0.5rem;
         }
-        button:active {
-            transform: scale(0.95);
-        }
-        button.primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
+        button:active { transform: scale(0.95); }
+        button.primary { background-color: var(--primary); border-color: var(--primary); }
+        button.success { background-color: var(--success); border-color: var(--success); }
+        button.danger { background-color: var(--danger); border-color: var(--danger); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
         #error-message {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(220, 38, 38, 0.95);
+            background: rgba(220,38,38,0.95);
             padding: 1.5rem;
             border-radius: 1rem;
             text-align: center;
-            width: 90%;
-            max-width: 400px;
+            width: 90%; max-width: 400px;
             z-index: 20;
             display: none;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
-        /* Modal */
-        #result-modal {
+
+        /* === OVERLAY BASE === */
+        .overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0,0,0,0.75);
             backdrop-filter: blur(8px);
             display: none;
             justify-content: center;
-            align-items: center;
+            align-items: flex-end;
             z-index: 30;
-            padding: 1.5rem;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        #result-modal.show {
-            display: flex;
-            opacity: 1;
-        }
-        .modal-content {
-            background: #1e293b;
-            padding: 2rem;
-            border-radius: 1.5rem;
+        .overlay.show { display: flex; opacity: 1; }
+
+        /* Sheet-style panels from bottom */
+        .sheet {
+            background: var(--surface);
+            border-radius: 1.5rem 1.5rem 0 0;
             width: 100%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            transform: translateY(20px);
-            transition: transform 0.3s ease;
+            max-width: 520px;
+            padding: 1.5rem;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            max-height: 92dvh;
+            display: flex;
+            flex-direction: column;
         }
-        #result-modal.show .modal-content {
-            transform: translateY(0);
+        .overlay.show .sheet { transform: translateY(0); }
+
+        .sheet-handle {
+            width: 36px; height: 4px;
+            background: var(--border);
+            border-radius: 9999px;
+            margin: 0 auto 1.25rem;
         }
-        .modal-content h2 {
-            margin-bottom: 1.5rem;
-            font-size: 1.25rem;
-            color: #94a3b8;
-        }
-        .result-box {
-            background: #0f172a;
-            padding: 1.25rem;
-            border-radius: 0.75rem;
-            word-break: break-all;
-            margin-bottom: 2rem;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        .sheet h2 {
             font-size: 1.1rem;
-            border: 1px solid #334155;
-            color: #e2e8f0;
-            max-height: 200px;
-            overflow-y: auto;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
         }
-        .modal-actions {
+        .sheet .subtitle {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 1.25rem;
+        }
+
+        /* === CHOICE MODAL === */
+        .choice-options {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            margin-bottom: 1rem;
         }
+        .choice-btn {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .choice-btn:hover, .choice-btn:active { border-color: var(--primary); background: rgba(59,130,246,0.08); }
+        .choice-btn .choice-icon {
+            font-size: 1.75rem;
+            flex-shrink: 0;
+        }
+        .choice-btn .choice-label { font-weight: 600; font-size: 1rem; }
+        .choice-btn .choice-desc { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+
+        /* === CATEGORY MODAL === */
+        #modal-category .sheet { align-items: stretch; }
+        .items-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            padding-right: 2px;
+        }
+        .item-row {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .item-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .item-price {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        .item-category select {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            cursor: pointer;
+        }
+        .item-category select:focus { outline: none; border-color: var(--primary); }
+
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 2rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        .spinner {
+            width: 32px; height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .sheet-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+        .sheet-actions button {
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        /* === RESULT / STATUS MODAL === */
+        #modal-status .sheet {
+            align-items: center;
+            text-align: center;
+        }
+        .status-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+        #status-message {
+            font-size: 1rem;
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        /* === OSOBA SELECTOR === */
+        .osoba-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .osoba-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border-radius: 0.6rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 2px solid var(--border);
+            background: #0f172a;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+        .osoba-btn.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(59,130,246,0.1);
+        }
+
         .toast {
             position: fixed;
-            top: 2rem;
-            left: 50%;
+            top: 2rem; left: 50%;
             transform: translateX(-50%) translateY(-100px);
-            background: #10b981;
+            background: var(--success);
             color: white;
             padding: 0.75rem 1.5rem;
             border-radius: 9999px;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 40;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            z-index: 50;
             font-weight: 500;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
         }
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.error { background: var(--danger); }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>QR Skener</h1>
-    </header>
+<header><h1>QR Skener</h1></header>
 
-    <div id="reader-container">
-        <div id="reader"></div>
-        <div id="error-message"></div>
-    </div>
+<div id="reader-container">
+    <div id="reader"></div>
+    <div id="error-message"></div>
+</div>
 
-    <div class="controls">
-        <button id="btn-switch-camera" style="display: none;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
-        </button>
-        <button id="btn-reset">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-            Reštartovať
-        </button>
-    </div>
+<div class="controls">
+    <button id="btn-switch-camera" style="display:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    </button>
+    <button id="btn-reset">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Reštartovať
+    </button>
+</div>
 
-    <div id="result-modal">
-        <div class="modal-content">
-            <h2>Naskenovaný obsah</h2>
-            <div class="result-box" id="result-text"></div>
-            <div class="modal-actions">
-                <button class="primary" id="btn-copy">Kopírovať text</button>
-                <button class="primary" id="btn-open-link" style="display: none;">Otvoriť odkaz</button>
-                <button id="btn-close-modal">Skenovať znova</button>
+<!-- ========== MODAL: VÝBER AKCIE ========== -->
+<div class="overlay" id="modal-choice">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <h2>Bloček naskenovaný</h2>
+        <p class="subtitle" id="choice-uid-preview"></p>
+
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.4rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">Účet</div>
+            <div class="osoba-row">
+                <div class="osoba-btn active" data-osoba="Janka">Janka</div>
+                <div class="osoba-btn" data-osoba="Miro">Miro</div>
+                <div class="osoba-btn" data-osoba="Spoločné">Spoločné</div>
             </div>
         </div>
+
+        <div class="choice-options">
+            <button class="choice-btn" id="btn-quick-save">
+                <span class="choice-icon">⚡</span>
+                <div>
+                    <div class="choice-label">Zapísať priamo</div>
+                    <div class="choice-desc">Bez kategórií, stĺpec F ostane prázdny</div>
+                </div>
+            </button>
+            <button class="choice-btn" id="btn-with-categories">
+                <span class="choice-icon">🏷️</span>
+                <div>
+                    <div class="choice-label">Priradiť kategórie</div>
+                    <div class="choice-desc">Načítam položky a priradíš každej kategóriu</div>
+                </div>
+            </button>
+        </div>
+
+        <div class="sheet-actions" style="border-top:none; padding-top:0;">
+            <button id="btn-choice-cancel">Zrušiť</button>
+        </div>
     </div>
+</div>
 
-    <div class="toast" id="toast">Skopírované!</div>
+<!-- ========== MODAL: KATEGÓRIE ========== -->
+<div class="overlay" id="modal-category">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <h2>Priradiť kategórie</h2>
+        <p class="subtitle" id="category-shop-name"></p>
 
-    <script>
-        let html5QrCode;
-        let currentFacingMode = "environment";
-        let isScanning = false;
+        <div id="items-loading" class="loading-state">
+            <div class="spinner"></div>
+            <span>Načítavam položky z eKasa...</span>
+        </div>
 
-        const errorElement = document.getElementById('error-message');
-        const modalElement = document.getElementById('result-modal');
-        const resultTextElement = document.getElementById('result-text');
-        const btnCopy = document.getElementById('btn-copy');
-        const btnOpenLink = document.getElementById('btn-open-link');
-        const btnCloseModal = document.getElementById('btn-close-modal');
-        const btnReset = document.getElementById('btn-reset');
-        const btnSwitchCamera = document.getElementById('btn-switch-camera');
-        const toastElement = document.getElementById('toast');
+        <div class="items-list" id="items-list" style="display:none;"></div>
 
-        let scannedResult = "";
+        <div class="sheet-actions" id="category-actions" style="display:none;">
+            <button class="success" id="btn-confirm-categories">
+                ✅ Potvrdiť a zapísať
+            </button>
+            <button id="btn-category-cancel">Zrušiť</button>
+        </div>
+    </div>
+</div>
 
-        function isValidUrl(string) {
-            try {
-                const url = new URL(string);
-                return url.protocol === 'http:' || url.protocol === 'https:';
-            } catch (_) {
-                return false;
-            }
+<!-- ========== MODAL: STATUS ========== -->
+<div class="overlay" id="modal-status">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="status-icon" id="status-icon">⏳</div>
+        <h2 id="status-title">Zapisujem...</h2>
+        <p id="status-message"></p>
+        <div class="sheet-actions" style="width:100%;">
+            <button id="btn-status-close" style="display:none;">Skenovať znova</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== CONFIG =====
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyitHz-0abSUB7ozeHzFyVogZpDlQbjDWhc-pMhN61V2p3UPU3Dl2265PXlFm5WbiXP2g/exec";
+
+const KATEGORIE = [
+    "— bez kategórie —",
+    "Auto + servis",
+    "Darček",
+    "Darovali nám",
+    "Deti, dieťa",
+    "Domácnosť",
+    "Dovolenka, výlet",
+    "Drogéria",
+    "ELEKTRINA",
+    "Hypotéka, úver",
+    "ILAVA - prerábka",
+    "Iné",
+    "Internet, TV",
+    "Jedlo, pitie",
+    "Kredit, paušál",
+    "Kultúra",
+    "Lekár - ošetrenie",
+    "Lieky",
+    "Oblečenie, obuv",
+    "PHM",
+    "PLYN",
+    "Poistenie",
+    "Potraviny",
+    "Skúter + servis",
+    "Sladkosti, blbosti",
+    "Sporenie, investovanie",
+    "Šport",
+    "VODA",
+    "Vzdelávanie"
+];
+
+// ===== STATE =====
+let html5QrCode;
+let currentFacingMode = "environment";
+let isScanning = false;
+let scannedUID = "";
+let selectedOsoba = "Janka";
+let loadedItems = []; // [{name, price}]
+
+// ===== ELEMENTS =====
+const errorElement = document.getElementById('error-message');
+const btnReset = document.getElementById('btn-reset');
+const btnSwitchCamera = document.getElementById('btn-switch-camera');
+const toastElement = document.getElementById('toast');
+
+// Choice modal
+const modalChoice = document.getElementById('modal-choice');
+const choiceUidPreview = document.getElementById('choice-uid-preview');
+const btnQuickSave = document.getElementById('btn-quick-save');
+const btnWithCategories = document.getElementById('btn-with-categories');
+const btnChoiceCancel = document.getElementById('btn-choice-cancel');
+
+// Category modal
+const modalCategory = document.getElementById('modal-category');
+const categoryShopName = document.getElementById('category-shop-name');
+const itemsLoading = document.getElementById('items-loading');
+const itemsList = document.getElementById('items-list');
+const categoryActions = document.getElementById('category-actions');
+const btnConfirmCategories = document.getElementById('btn-confirm-categories');
+const btnCategoryCancel = document.getElementById('btn-category-cancel');
+
+// Status modal
+const modalStatus = document.getElementById('modal-status');
+const statusIcon = document.getElementById('status-icon');
+const statusTitle = document.getElementById('status-title');
+const statusMessage = document.getElementById('status-message');
+const btnStatusClose = document.getElementById('btn-status-close');
+
+// ===== UTILS =====
+function showToast(msg, isError = false) {
+    toastElement.textContent = msg;
+    toastElement.className = 'toast' + (isError ? ' error' : '');
+    toastElement.classList.add('show');
+    setTimeout(() => toastElement.classList.remove('show'), 3000);
+}
+
+function showError(msg) {
+    errorElement.textContent = msg;
+    errorElement.style.display = 'block';
+}
+function hideError() { errorElement.style.display = 'none'; }
+
+function openOverlay(el) {
+    el.style.display = 'flex';
+    requestAnimationFrame(() => el.classList.add('show'));
+}
+function closeOverlay(el) {
+    el.classList.remove('show');
+    setTimeout(() => { el.style.display = 'none'; }, 350);
+}
+
+// ===== OSOBA BUTTONS =====
+document.querySelectorAll('.osoba-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.osoba-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedOsoba = btn.dataset.osoba;
+    });
+});
+
+// ===== SCANNER =====
+async function startScanner() {
+    hideError();
+    closeOverlay(modalChoice);
+    closeOverlay(modalCategory);
+    closeOverlay(modalStatus);
+
+    if (html5QrCode && isScanning) {
+        try { await html5QrCode.stop(); } catch(e) {}
+        isScanning = false;
+    }
+    if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
+    const config = {
+        fps: 10,
+        qrbox: (w, h) => {
+            const min = Math.min(w, h);
+            return { width: Math.floor(min * 0.7), height: Math.floor(min * 0.7) };
         }
+    };
 
-        function showToast(message) {
-            toastElement.innerText = message;
-            toastElement.classList.add('show');
-            setTimeout(() => {
-                toastElement.classList.remove('show');
-            }, 3000);
-        }
-
-        function showError(message) {
-            errorElement.innerText = message;
-            errorElement.style.display = 'block';
-        }
-
-        function hideError() {
-            errorElement.style.display = 'none';
-        }
-
-        async function startScanner() {
-            hideError();
-            
-            if (html5QrCode && isScanning) {
-                try {
-                    await html5QrCode.stop();
-                } catch (e) {
-                    console.warn("Error stopping scanner", e);
+    try {
+        await html5QrCode.start(
+            { facingMode: currentFacingMode },
+            config,
+            (decodedText) => {
+                if (isScanning) {
+                    html5QrCode.pause();
+                    onQRScanned(decodedText);
                 }
-                isScanning = false;
-            }
+            },
+            () => {}
+        );
+        isScanning = true;
 
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-            
-            const config = { 
-                fps: 10, 
-                qrbox: (viewfinderWidth, viewfinderHeight) => {
-                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    return {
-                        width: Math.floor(minEdge * 0.7),
-                        height: Math.floor(minEdge * 0.7)
-                    };
-                }
-            };
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 1) btnSwitchCamera.style.display = 'flex';
+    } catch(err) {
+        isScanning = false;
+        const s = err.toString();
+        if (s.includes('NotAllowedError') || err.name === 'NotAllowedError')
+            showError("Prístup ku kamere bol zamietnutý. Povoľte kameru v nastaveniach prehliadača.");
+        else if (s.includes('NotFoundError') || err.name === 'NotFoundError')
+            showError("Na tomto zariadení sa nenašla žiadna kamera.");
+        else
+            showError("Chyba kamery: " + (err.message || s));
+    }
+}
 
-            try {
-                await html5QrCode.start(
-                    { facingMode: currentFacingMode },
-                    config,
-                    (decodedText, decodedResult) => {
-                        if (isScanning) {
-                            html5QrCode.pause();
-                            scannedResult = decodedText;
-                            showModal(decodedText);
-                        }
-                    },
-                    (errorMessage) => {
-                        // Ignore frame errors
-                    }
-                );
-                isScanning = true;
-                
-                // Check for multiple cameras
-                const devices = await Html5Qrcode.getCameras();
-                if (devices && devices.length > 1) {
-                    btnSwitchCamera.style.display = 'flex';
-                }
+function onQRScanned(text) {
+    scannedUID = text;
+    // Show short preview of UID
+    const preview = text.length > 40 ? text.substring(0, 37) + '…' : text;
+    choiceUidPreview.textContent = preview;
+    openOverlay(modalChoice);
+}
 
-            } catch (err) {
-                isScanning = false;
-                console.error(err);
-                const errStr = err.toString();
-                if (errStr.includes('NotAllowedError') || err.name === 'NotAllowedError') {
-                    showError("Prístup ku kamere bol zamietnutý. Prosím, povoľte kameru v nastaveniach prehliadača.");
-                } else if (errStr.includes('NotFoundError') || err.name === 'NotFoundError') {
-                    showError("Na tomto zariadení sa nenašla žiadna kamera.");
-                } else {
-                    showError("Chyba kamery: " + (err.message || errStr));
-                }
-            }
+// ===== QUICK SAVE (bez kategórií) =====
+btnQuickSave.addEventListener('click', async () => {
+    closeOverlay(modalChoice);
+    showStatus('⏳', 'Zapisujem...', 'Komunikujem so serverom eKasa a Google Sheets...');
+    openOverlay(modalStatus);
+
+    try {
+        const result = await callAppScript('zapisBlok', { uid: scannedUID, osoba: selectedOsoba });
+        if (result.startsWith('✅')) {
+            showStatus('✅', 'Zapísané!', result.replace('✅ ', ''));
+        } else {
+            showStatus('❌', 'Chyba', result.replace('❌ ', ''));
+        }
+    } catch(e) {
+        showStatus('❌', 'Chyba', 'Nepodarilo sa spojiť so serverom: ' + e.message);
+    }
+    btnStatusClose.style.display = 'flex';
+});
+
+// ===== WITH CATEGORIES =====
+btnWithCategories.addEventListener('click', async () => {
+    closeOverlay(modalChoice);
+    // Reset category modal
+    itemsLoading.style.display = 'flex';
+    itemsList.style.display = 'none';
+    categoryActions.style.display = 'none';
+    itemsList.innerHTML = '';
+    categoryShopName.textContent = 'Načítavam...';
+    openOverlay(modalCategory);
+
+    try {
+        const data = await callAppScript('nacitajPolozky', { uid: scannedUID });
+
+        if (data.error) {
+            closeOverlay(modalCategory);
+            showStatus('❌', 'Chyba', data.error);
+            btnStatusClose.style.display = 'flex';
+            openOverlay(modalStatus);
+            return;
         }
 
-        function showModal(text) {
-            resultTextElement.innerText = text;
-            modalElement.classList.add('show');
-            
-            if (isValidUrl(text)) {
-                btnOpenLink.style.display = 'flex';
-                btnOpenLink.onclick = () => {
-                    window.open(text, '_blank');
-                };
-            } else {
-                btnOpenLink.style.display = 'none';
-            }
-        }
+        loadedItems = data.items || [];
+        categoryShopName.textContent = data.shop || '';
 
-        function hideModal() {
-            modalElement.classList.remove('show');
-            setTimeout(() => {
-                if (html5QrCode && isScanning) {
-                    html5QrCode.resume();
-                }
-            }, 300); // Wait for transition
-        }
+        itemsLoading.style.display = 'none';
+        itemsList.style.display = 'flex';
+        categoryActions.style.display = 'flex';
 
-        // Event Listeners
-        btnCopy.addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText(scannedResult);
-                showToast("Skopírované do schránky!");
-            } catch (err) {
-                // Fallback for older browsers
-                const textArea = document.createElement("textarea");
-                textArea.value = scannedResult;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    showToast("Skopírované do schránky!");
-                } catch (e) {
-                    showToast("Chyba pri kopírovaní");
-                }
-                document.body.removeChild(textArea);
-            }
+        loadedItems.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'item-row';
+            row.innerHTML = `
+                <div class="item-name">${escapeHtml(item.name)}</div>
+                <div class="item-price">${Number(item.price).toFixed(2).replace('.',',')} €</div>
+                <div class="item-category">
+                    <select id="kat-${idx}">
+                        ${KATEGORIE.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+            itemsList.appendChild(row);
         });
 
-        btnCloseModal.addEventListener('click', hideModal);
+    } catch(e) {
+        closeOverlay(modalCategory);
+        showStatus('❌', 'Chyba', 'Nepodarilo sa načítať položky: ' + e.message);
+        btnStatusClose.style.display = 'flex';
+        openOverlay(modalStatus);
+    }
+});
 
-        btnReset.addEventListener('click', () => {
-            startScanner();
-        });
+// ===== CONFIRM CATEGORIES =====
+btnConfirmCategories.addEventListener('click', async () => {
+    // Collect categories
+    const categories = loadedItems.map((item, idx) => {
+        const sel = document.getElementById(`kat-${idx}`);
+        const val = sel ? sel.value : '';
+        return val === '— bez kategórie —' ? '' : val;
+    });
 
-        btnSwitchCamera.addEventListener('click', () => {
-            currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
-            startScanner();
-        });
+    closeOverlay(modalCategory);
+    showStatus('⏳', 'Zapisujem...', 'Ukladám položky s kategóriami do Google Sheets...');
+    openOverlay(modalStatus);
 
-        // Start scanner on load
-        window.addEventListener('load', () => {
-            // Small delay to ensure DOM is fully ready for the video element
-            setTimeout(startScanner, 100);
+    try {
+        const result = await callAppScript('zapisSKategoriami', {
+            uid: scannedUID,
+            osoba: selectedOsoba,
+            kategorie: categories
         });
-    </script>
+        if (result.startsWith('✅')) {
+            showStatus('✅', 'Zapísané!', result.replace('✅ ', ''));
+        } else {
+            showStatus('❌', 'Chyba', result.replace('❌ ', ''));
+        }
+    } catch(e) {
+        showStatus('❌', 'Chyba', 'Nepodarilo sa uložiť: ' + e.message);
+    }
+    btnStatusClose.style.display = 'flex';
+});
+
+// ===== CANCEL BUTTONS =====
+btnChoiceCancel.addEventListener('click', () => {
+    closeOverlay(modalChoice);
+    if (html5QrCode && isScanning) html5QrCode.resume();
+});
+btnCategoryCancel.addEventListener('click', () => {
+    closeOverlay(modalCategory);
+    openOverlay(modalChoice);
+});
+btnStatusClose.addEventListener('click', () => {
+    closeOverlay(modalStatus);
+    startScanner();
+});
+btnReset.addEventListener('click', startScanner);
+btnSwitchCamera.addEventListener('click', () => {
+    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+    startScanner();
+});
+
+// ===== STATUS HELPER =====
+function showStatus(icon, title, msg) {
+    statusIcon.textContent = icon;
+    statusTitle.textContent = title;
+    statusMessage.textContent = msg;
+    btnStatusClose.style.display = 'none';
+}
+
+// ===== APPS SCRIPT CALLER =====
+async function callAppScript(action, params) {
+    const urlParams = new URLSearchParams({ action, ...flattenParams(params) });
+    const url = APPS_SCRIPT_URL + '?' + urlParams.toString();
+    const response = await fetch(url);
+    const text = await response.text();
+    // Try parse as JSON first, else return as string result
+    try {
+        return JSON.parse(text);
+    } catch {
+        return text;
+    }
+}
+
+function flattenParams(obj) {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+        if (Array.isArray(v)) {
+            out[k] = JSON.stringify(v);
+        } else {
+            out[k] = v;
+        }
+    }
+    return out;
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+// ===== START =====
+window.addEventListener('load', () => setTimeout(startScanner, 100));
+</script>
 </body>
 </html>
