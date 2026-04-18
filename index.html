@@ -363,6 +363,13 @@
                     <div class="choice-desc">Načítam položky a priradíš každej kategóriu</div>
                 </div>
             </button>
+            <button class="choice-btn" id="btn-phm">
+                <span class="choice-icon">⛽</span>
+                <div>
+                    <div class="choice-label">Tankovanie PHM</div>
+                    <div class="choice-desc">Zapíše výdavok aj do hárku PHM pre Fabia combi 3</div>
+                </div>
+            </button>
         </div>
 
         <div class="sheet-actions" style="border-top:none; padding-top:0;">
@@ -390,6 +397,51 @@
                 ✅ Potvrdiť a zapísať
             </button>
             <button id="btn-category-cancel">Zrušiť</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MODAL: PHM ========== -->
+<div class="overlay" id="modal-phm">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <h2>⛽ Tankovanie PHM</h2>
+        <p class="subtitle" id="phm-shop-name">Načítavam...</p>
+
+        <div id="phm-loading" class="loading-state">
+            <div class="spinner"></div>
+            <span>Načítavam údaje z bloku...</span>
+        </div>
+
+        <div id="phm-form" style="display:none; flex-direction:column; gap:0.75rem; flex:1; overflow-y:auto; padding-bottom:0.5rem;">
+            <div>
+                <div style="font-size:0.8rem;color:var(--muted);font-weight:600;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:0.4rem;">Typ paliva</div>
+                <select id="phm-fuel-select" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:0.5rem;color:var(--text);padding:0.75rem;font-size:1rem;appearance:none;-webkit-appearance:none;">
+                    <option value="LPG">LPG</option>
+                    <option value="Benzín 95">Benzín 95</option>
+                    <option value="Benzín 100">Benzín 100</option>
+                </select>
+            </div>
+            <div>
+                <div style="font-size:0.8rem;color:var(--muted);font-weight:600;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:0.4rem;">Natankované (litre)</div>
+                <input type="number" step="0.01" id="phm-liters-input" placeholder="napr. 15.23"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:0.5rem;color:var(--text);padding:0.75rem;font-size:1rem;" />
+            </div>
+            <div>
+                <div style="font-size:0.8rem;color:var(--muted);font-weight:600;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:0.4rem;">Zaplatená suma (€)</div>
+                <input type="number" step="0.01" id="phm-price-input" placeholder="napr. 15.20"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:0.5rem;color:var(--text);padding:0.75rem;font-size:1rem;" />
+            </div>
+            <div>
+                <div style="font-size:0.8rem;color:var(--primary);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:0.4rem;">⚠️ Stav km — odčítaj z auta</div>
+                <input type="number" id="phm-km-input" placeholder="napr. 85420"
+                    style="width:100%;background:rgba(59,130,246,0.08);border:2px solid var(--primary);border-radius:0.5rem;color:var(--text);padding:0.875rem;font-size:1.15rem;font-weight:600;" />
+            </div>
+        </div>
+
+        <div class="sheet-actions" id="phm-actions" style="display:none;">
+            <button class="success" id="btn-confirm-phm">✅ Zapísať tankovanie</button>
+            <button id="btn-phm-cancel">Zrušiť</button>
         </div>
     </div>
 </div>
@@ -475,6 +527,20 @@ const categoryActions = document.getElementById('category-actions');
 const btnConfirmCategories = document.getElementById('btn-confirm-categories');
 const btnCategoryCancel = document.getElementById('btn-category-cancel');
 
+// PHM modal
+const modalPhm = document.getElementById('modal-phm');
+const phmShopName = document.getElementById('phm-shop-name');
+const phmLoading = document.getElementById('phm-loading');
+const phmForm = document.getElementById('phm-form');
+const phmFuelSelect = document.getElementById('phm-fuel-select');
+const phmLitersInput = document.getElementById('phm-liters-input');
+const phmPriceInput = document.getElementById('phm-price-input');
+const phmKmInput = document.getElementById('phm-km-input');
+const phmActions = document.getElementById('phm-actions');
+const btnPhm = document.getElementById('btn-phm');
+const btnConfirmPhm = document.getElementById('btn-confirm-phm');
+const btnPhmCancel = document.getElementById('btn-phm-cancel');
+
 // Status modal
 const modalStatus = document.getElementById('modal-status');
 const statusIcon = document.getElementById('status-icon');
@@ -520,6 +586,8 @@ async function startScanner() {
     closeOverlay(modalChoice);
     closeOverlay(modalCategory);
     closeOverlay(modalStatus);
+
+    closeOverlay(modalPhm);
 
     if (html5QrCode && isScanning) {
         try { await html5QrCode.stop(); } catch(e) {}
@@ -670,6 +738,84 @@ btnConfirmCategories.addEventListener('click', async () => {
         showStatus('❌', 'Chyba', 'Nepodarilo sa uložiť: ' + e.message);
     }
     btnStatusClose.style.display = 'flex';
+});
+
+// ===== PHM FLOW =====
+btnPhm.addEventListener('click', async () => {
+    closeOverlay(modalChoice);
+    phmShopName.textContent = 'Načítavam...';
+    phmLoading.style.display = 'flex';
+    phmForm.style.display = 'none';
+    phmActions.style.display = 'none';
+    phmKmInput.value = '';
+    phmKmInput.style.borderColor = '';
+    openOverlay(modalPhm);
+
+    try {
+        const data = await callAppScript('nacitajPHMData', { uid: scannedUID });
+
+        if (data.error) {
+            closeOverlay(modalPhm);
+            showStatus('❌', 'Chyba', data.error);
+            btnStatusClose.style.display = 'flex';
+            openOverlay(modalStatus);
+            return;
+        }
+
+        phmShopName.textContent = data.shop || '';
+        phmFuelSelect.value = data.typPaliva || 'LPG';
+        phmLitersInput.value = data.litrov > 0 ? data.litrov : '';
+        phmPriceInput.value = data.cena > 0 ? data.cena : '';
+
+        phmLoading.style.display = 'none';
+        phmForm.style.display = 'flex';
+        phmActions.style.display = 'flex';
+        setTimeout(() => phmKmInput.focus(), 100);
+
+    } catch(e) {
+        closeOverlay(modalPhm);
+        showStatus('❌', 'Chyba', 'Nepodarilo sa načítať údaje: ' + e.message);
+        btnStatusClose.style.display = 'flex';
+        openOverlay(modalStatus);
+    }
+});
+
+btnConfirmPhm.addEventListener('click', async () => {
+    const kmVal = phmKmInput.value.trim();
+    if (!kmVal || isNaN(Number(kmVal)) || Number(kmVal) <= 0) {
+        phmKmInput.style.borderColor = 'var(--danger)';
+        phmKmInput.focus();
+        return;
+    }
+    phmKmInput.style.borderColor = '';
+
+    closeOverlay(modalPhm);
+    showStatus('⏳', 'Zapisujem...', 'Ukladám tankovanie do Google Sheets...');
+    openOverlay(modalStatus);
+
+    try {
+        const result = await callAppScript('zapisPHM', {
+            uid: scannedUID,
+            osoba: selectedOsoba,
+            kmStav: Number(kmVal),
+            typPaliva: phmFuelSelect.value,
+            litrov: Number(phmLitersInput.value) || 0,
+            cena: Number(phmPriceInput.value) || 0
+        });
+        if (typeof result === 'string' && result.startsWith('✅')) {
+            showStatus('✅', 'Zapísané!', result.replace('✅ ', ''));
+        } else {
+            showStatus('❌', 'Chyba', typeof result === 'string' ? result.replace('❌ ', '') : JSON.stringify(result));
+        }
+    } catch(e) {
+        showStatus('❌', 'Chyba', 'Nepodarilo sa uložiť: ' + e.message);
+    }
+    btnStatusClose.style.display = 'flex';
+});
+
+btnPhmCancel.addEventListener('click', () => {
+    closeOverlay(modalPhm);
+    openOverlay(modalChoice);
 });
 
 // ===== CANCEL BUTTONS =====
